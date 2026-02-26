@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ASPIRE Championship Final Reveal</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+html, body{
+  margin:0;
+  padding:0;
+  height:100%;
+  background:#0a0f1c;   /* Guaranteed dark background */
+  color:white;
+  font-family:'Segoe UI',sans-serif;
+  overflow:hidden;
+}
+
+/* Intro */
+#intro{
+  position:fixed;
+  width:100%;
+  height:100%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:38px;
+  letter-spacing:3px;
+  background:#0a0f1c;
+  animation:fadePulse 2s infinite;
+}
+
+@keyframes fadePulse{
+  0%{opacity:0.6;}
+  50%{opacity:1;}
+  100%{opacity:0.6;}
+}
+
+/* Main Section */
+#scoreSection{
+  position:absolute;
+  top:8%;
+  left:12%;
+  width:76%;
+  opacity:0;
+  transition:1.2s ease;
+}
+
+h1{
+  text-align:center;
+  margin-bottom:40px;
+  font-weight:600;
+}
+
+/* House Blocks */
+.house{
+  margin:28px 0;
+}
+
+.label{
+  display:flex;
+  justify-content:space-between;
+  font-size:22px;
+  margin-bottom:8px;
+}
+
+.bar{
+  height:45px;
+  background:#1b2235;
+  border-radius:50px;
+  overflow:hidden;
+  position:relative;
+}
+
+.fill{
+  height:100%;
+  width:0%;
+  border-radius:50px;
+  transition:0.8s ease;
+  position:relative;
+}
+
+/* House Colors */
+.falcons{background:#e63946;}
+.marlins{background:#0077b6;}
+.raptors{background:#2a9d8f;}
+.pegasus{background:#ffb703;color:black;}
+
+/* Winner tip glow */
+.winner::after{
+  content:"";
+  position:absolute;
+  right:0;
+  top:0;
+  height:100%;
+  width:18px;
+  background:linear-gradient(to right, transparent, gold);
+  box-shadow:0 0 15px gold;
+  animation:goldPulse 1.5s infinite alternate;
+}
+
+@keyframes goldPulse{
+  from{opacity:0.6;}
+  to{opacity:1;}
+}
+
+/* Winner text */
+#winnerText{
+  text-align:center;
+  font-size:28px;
+  margin-top:25px;
+  opacity:0;
+  transition:1s;
+  color:gold;
+}
+
+#chartContainer{
+  margin-top:50px;
+  opacity:0;
+  transition:1.5s;
+}
+</style>
+</head>
+<body>
+
+<div id="intro">
+  ASPIRE Final Score Computation...
+</div>
+
+<div id="scoreSection">
+
+<h1>🏆 ASPIRE House Championship</h1>
+
+<div class="house">
+  <div class="label"><span>Falcons</span><span id="FalconsScore"></span></div>
+  <div class="bar"><div class="fill falcons" id="FalconsBar"></div></div>
+</div>
+
+<div class="house">
+  <div class="label"><span>Marlins</span><span id="MarlinsScore"></span></div>
+  <div class="bar"><div class="fill marlins" id="MarlinsBar"></div></div>
+</div>
+
+<div class="house">
+  <div class="label"><span>Raptors</span><span id="RaptorsScore"></span></div>
+  <div class="bar"><div class="fill raptors" id="RaptorsBar"></div></div>
+</div>
+
+<div class="house">
+  <div class="label"><span>Pegasus</span><span id="PegasusScore"></span></div>
+  <div class="bar"><div class="fill pegasus" id="PegasusBar"></div></div>
+</div>
+
+<div id="winnerText"></div>
+
+<div id="chartContainer">
+  <canvas id="lineChart"></canvas>
+</div>
+
+</div>
+
+<script>
+/* FINAL SCORES */
+let finalScores = {
+  Falcons:50,
+  Marlins:80,
+  Raptors:180,
+  Pegasus:300
+};
+
+let displayScores = {Falcons:0, Marlins:0, Raptors:0, Pegasus:0};
+let maxScore = Math.max(...Object.values(finalScores));
+
+setTimeout(startRace, 2500);
+
+function startRace(){
+  document.getElementById("intro").style.display="none";
+  document.getElementById("scoreSection").style.opacity="1";
+
+  let interval = setInterval(()=>{
+    for(let h in displayScores){
+      displayScores[h] = Math.random()*maxScore;
+    }
+    updateDisplay();
+  },120);
+
+  setTimeout(()=>{
+    clearInterval(interval);
+    landToFinal();
+  },3000);
+}
+
+function landToFinal(){
+  let steps = 30;
+  let step = 0;
+
+  let landing = setInterval(()=>{
+    step++;
+    for(let h in finalScores){
+      let diff = finalScores[h] - displayScores[h];
+      displayScores[h] += diff*0.25;
+    }
+    updateDisplay();
+
+    if(step>=steps){
+      clearInterval(landing);
+      displayScores = {...finalScores};
+      updateDisplay();
+      grandReveal();
+    }
+  },80);
+}
+
+function grandReveal(){
+  let highest = Math.max(...Object.values(finalScores));
+  let winner = Object.keys(finalScores)
+               .find(k=>finalScores[k]===highest);
+
+  /* Add golden edge to winning bar */
+  document.getElementById(winner+"Bar").classList.add("winner");
+
+  document.getElementById("winnerText").innerText =
+    "🥇 "+winner+" are the Champions of ASPIRE!";
+  document.getElementById("winnerText").style.opacity="1";
+
+  confetti({
+    particleCount:300,
+    spread:130,
+    origin:{y:0.6},
+    colors:["#FFD700","#ffffff"]
+  });
+
+  setTimeout(()=>{
+    document.getElementById("chartContainer").style.opacity="1";
+    createGraph();
+  },1000);
+}
+
+function updateDisplay(){
+  for(let h in displayScores){
+    document.getElementById(h+"Score").innerText =
+      Math.round(displayScores[h]);
+
+    document.getElementById(h+"Bar").style.width =
+      (displayScores[h]/maxScore*100)+"%";
+  }
+}
+
+function createGraph(){
+  new Chart(document.getElementById("lineChart"),{
+    type:"line",
+    data:{
+      labels:["Final Score"],
+      datasets:[
+        {label:"Falcons", data:[finalScores.Falcons], borderColor:"#e63946"},
+        {label:"Marlins", data:[finalScores.Marlins], borderColor:"#0077b6"},
+        {label:"Raptors", data:[finalScores.Raptors], borderColor:"#2a9d8f"},
+        {label:"Pegasus", data:[finalScores.Pegasus], borderColor:"#ffb703"}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{color:"white"}}},
+      scales:{
+        y:{beginAtZero:true, ticks:{color:"white"}},
+        x:{ticks:{color:"white"}}
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
